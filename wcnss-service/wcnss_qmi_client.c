@@ -1,6 +1,5 @@
 /*--------------------------------------------------------------------------
 Copyright (c) 2013, The Linux Foundation. All rights reserved.
-
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
     * Redistributions of source code must retain the above copyright
@@ -12,7 +11,6 @@ modification, are permitted provided that the following conditions are met:
       the names of its contributors may be used to endorse or promote
       products derived from this software without specific prior written
       permission.
-
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -29,13 +27,12 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifdef WCNSS_QMI
 #define LOG_TAG "wcnss_qmi"
 #include <cutils/log.h>
-#include <stdlib.h>
-#include <sys/stat.h>
 #include "wcnss_qmi_client.h"
 #include "qmi.h"
 #include "qmi_client.h"
 #include "device_management_service_v01.h"
 #include <cutils/properties.h>
+#include <string.h>
 
 #define SUCCESS 0
 #define FAILED -1
@@ -64,7 +61,7 @@ static int dms_init_done = FAILED;
 
 static char *dms_find_modem_port( char *prop_value_ptr)
 {
-	char *qmi_modem_port_ptr = QMI_PORT_RMNET_0;
+	char *qmi_modem_port_ptr = QMI_PORT_RMNET_1;
 
 	/* Sanity check */
 	if (prop_value_ptr == NULL) {
@@ -95,7 +92,7 @@ static char *dms_find_modem_port( char *prop_value_ptr)
 		QMI_UIM_PROP_BASEBAND_VALUE_APQ) == 0) ||
 		(strcmp(prop_value_ptr,
 		QMI_UIM_PROP_BASEBAND_VALUE_SGLTE) == 0)) {
-		qmi_modem_port_ptr = QMI_PORT_RMNET_0;
+		qmi_modem_port_ptr = QMI_PORT_RMNET_1;
 	} else if (strcmp(prop_value_ptr,
 		QMI_UIM_PROP_BASEBAND_VALUE_DSDA) == 0) {
 		/* If it is a DSDA configuration, use the existing API */
@@ -148,15 +145,6 @@ int wcnss_init_qmi()
 
 	qmi_client_err = qmi_client_init((const char *)qmi_modem_port,
 			dms_service, NULL, dms_service, &dms_qmi_client);
-
-	if ((qmi_client_err == QMI_PORT_NOT_OPEN_ERR) &&
-			(strcmp(qmi_modem_port, QMI_PORT_RMNET_0) == 0)){
-		ALOGE("%s: Retrying with port RMNET_1: %d",
-				__func__, qmi_client_err);
-		qmi_modem_port = QMI_PORT_RMNET_1;
-		qmi_client_err = qmi_client_init((const char *)qmi_modem_port,
-			       dms_service, NULL, dms_service, &dms_qmi_client);
-	}
 
 	if (qmi_client_err != QMI_NO_ERR){
 		ALOGE("%s: Error while Initializing QMI Client: %d",
@@ -214,63 +202,8 @@ int wcnss_qmi_get_wlan_address(unsigned char *pBdAddr)
 		ALOGE("%s: Succesfully Read WLAN MAC Address", __func__);
 		return SUCCESS;
 	} else {
-#ifdef WCNSS_INVALID_MAC_PREFIX
-#ifndef WCNSS_GENMAC_FILE
-#define WCNSS_GENMAC_FILE "/persist/.genmac"
-#endif
-		int i = 0;
-		struct stat statbuf;
-		FILE *genmac;
-		int macbytes[6] = { 0, };
-		// Limit the prefix to 4 bytes, we want at least 2 to be random
-		int prefixlen = strnlen(WCNSS_INVALID_MAC_PREFIX,8)/2;
-
-		// Misconfigured device source...?
-		if (prefixlen < 2) {
-			return FAILED;
-		}
-
-		// Use a previously stored value if it exists
-		if (!stat(WCNSS_GENMAC_FILE, &statbuf)) {
-			genmac = fopen(WCNSS_GENMAC_FILE,"r");
-			if (fscanf(genmac, "%c%c%c%c%c%c", &pBdAddr[0],
-				     &pBdAddr[1], &pBdAddr[2], &pBdAddr[3],
-				     &pBdAddr[4], &pBdAddr[5]) == 6) {
-				fclose(genmac);
-				ALOGE("%s: Succesfully Read local WLAN MAC Address", __func__);
-				return SUCCESS;
-			}
-			fclose(genmac);
-		}
-
-		sscanf(WCNSS_INVALID_MAC_PREFIX, "%2x%2x%2x%2x",
-				&macbytes[0], &macbytes[1],
-				&macbytes[2], &macbytes[3]);
-
-		// We don't need strong randomness, and if the NV is corrupted
-		// any hardware values are suspect, so just seed it with the
-		// current time
-		srand(time(NULL));
-
-		for (i = prefixlen; i<6; i++) {
-			macbytes[i] = rand() % 255;
-		}
-		// Invert them
-		for (i = 0; i < 6; i++) {
-			pBdAddr[i] = macbytes[5-i];
-		}
-
-		// Store for reuse
-		genmac = fopen(WCNSS_GENMAC_FILE,"w");
-		fwrite(pBdAddr, 1, 6, genmac);
-		fclose(genmac);
-
-		ALOGE("%s: Failed to Read WLAN MAC Address, successfully randomized one", __func__);
-		return SUCCESS;
-#else
 		ALOGE("%s: Failed to Read WLAN MAC Address", __func__);
 		return FAILED;
-#endif
 	}
 }
 
