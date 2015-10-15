@@ -1,6 +1,5 @@
 /*--------------------------------------------------------------------------
 Copyright (c) 2013, The Linux Foundation. All rights reserved.
-
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
     * Redistributions of source code must retain the above copyright
@@ -12,7 +11,6 @@ modification, are permitted provided that the following conditions are met:
       the names of its contributors may be used to endorse or promote
       products derived from this software without specific prior written
       permission.
-
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -25,6 +23,17 @@ WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
 OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 --------------------------------------------------------------------------*/
+#if defined(__BIONIC_FORTIFY)
+#include <sys/system_properties.h>
+#endif
+
+#define MODEM_BASEBAND_PROPERTY   "ro.baseband"
+#if defined(__BIONIC_FORTIFY)
+#define MODEM_BASEBAND_PROPERTY_SIZE  PROP_VALUE_MAX
+#else
+#define MODEM_BASEBAND_PROPERTY_SIZE  10
+#endif
+#define MODEM_BASEBAND_VALUE_APQ  "apq"
 
 #ifdef WCNSS_QMI
 #ifndef WCNSS_QMI_CLIENT_H
